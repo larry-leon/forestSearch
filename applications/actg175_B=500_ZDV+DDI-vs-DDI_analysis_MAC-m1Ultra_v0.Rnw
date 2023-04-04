@@ -322,8 +322,8 @@ cat("Minutes and hours for FS estimation",c(t.min,t.min/60),"\n")
 <<grf-fs_sg,echo=TRUE,out.height="400px",out.width="400px">>=
 # Compare with GRF
 layout(matrix(c(1,2,3,4), 2, 2, byrow = TRUE))
-plot.subgroup(sub1=df0.grf,sub1C=df1.grf,tte.name="time_days",event.name="cens",treat.name="treat",fix.rows=FALSE,byrisk=200,show.med=FALSE,ymin=0.4,sub1="(a)",sub2="(b)")
-plot.subgroup(sub1=df0.fs,sub1C=df1.fs,tte.name="time_days",event.name="cens",treat.name="treat",fix.rows=FALSE,byrisk=200,show.med=FALSE,ymin=0.4,sub1="(c)",sub2="(d)")
+plot.subgroup(sub1=df0.grf,sub1C=df1.grf,tte.name="time_days",event.name="cens",treat.name="treat",fix.rows=FALSE,byrisk=200,show.med=FALSE,ymin=0.4,subtitle1="(a)",subtitle2="(b)")
+plot.subgroup(sub1=df0.fs,sub1C=df1.fs,tte.name="time_days",event.name="cens",treat.name="treat",fix.rows=FALSE,byrisk=200,show.med=FALSE,ymin=0.4,subtitle1="(c)",subtitle2="(d)")
 @
 \end{center}
 \end{figure}
@@ -483,7 +483,7 @@ options(knitr.kable.NA = '.',format="latex")
 tab_actg<-kbl(resf,longtable=FALSE,align='c',format="latex",booktabs=TRUE,escape=F,digits=3,
 caption="\\label{tab:actg} ACTG-175 FS Analysis: Cox hazard ratio (HR) estimates for the ITT population and subgroups $H$ and $H^{c}$.
 Cox model estimates are based on subgroups: The estimated subgroup $\\hat{H}$; and 
-the bootstrap ($B=2,000$) bias-correction to $\\hat{H}$ estimates, denoted $\\hat{H}_{bc}$.  Estimates for the complement $H^{c}$ are defined analogously.
+the bootstrap ($B=500$) bias-correction to $\\hat{H}$ estimates, denoted $\\hat{H}_{bc}$.  Estimates for the complement $H^{c}$ are defined analogously.
 The number of subjects in each population ($\\#$ Subjects) are listed.") %>%
 kable_styling(full_width = FALSE, font_size=9,latex_options="hold_position") %>%
 group_rows("ITT", 1, 1) %>%

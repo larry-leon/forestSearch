@@ -35,7 +35,8 @@ plot_onesample<-function(df,tte.name,event.name,treat.name,wgt.name=NULL,xloc1=N
 
 # For plotting subgroups and the complement
 
-plot.subgroup<-function(tte.name,event.name,treat.name,wgt.name=NULL,sub1,sub1C,xloc1=NULL,xloc2=NULL,details=FALSE,show.logrank=FALSE,sub1="(a)",sub2="(b)",
+plot.subgroup<-function(tte.name,event.name,treat.name,wgt.name=NULL,sub1,sub1C,xloc1=NULL,xloc2=NULL,details=FALSE,show.logrank=FALSE,
+                        subtitle1="(a)",subtitle2="(b)",
                         ymin=0,exp.lab="Treat",con.lab="Control",legend.cex=0.70,risk.cex=0.65,yloc1=0.6,yloc2=0.6,subid=NULL,byrisk=2,fix.rows=TRUE,show.med=TRUE,ylab="Survival"){
   
   if(is.null(wgt.name)){
@@ -59,7 +60,7 @@ plot.subgroup<-function(tte.name,event.name,treat.name,wgt.name=NULL,sub1,sub1C,
                                    risk.set=TRUE,by.risk=byrisk,tpoints.add=tpoints.add,risk.cex=risk.cex,
                                    stop.onerror=TRUE,Xlab="Months",Ylab=ylab,details=details,
                                    ymin=ymin,show.logrank=show.logrank,show.med=show.med,show.cox=TRUE)
-  title(sub=sub1)
+  title(sub=subtitle1)
   cpoints <- km.fit$cpoints
   
   m1<-round(km.fit$med.1,2)
@@ -88,7 +89,7 @@ plot.subgroup<-function(tte.name,event.name,treat.name,wgt.name=NULL,sub1,sub1C,
                                    risk.set=TRUE,by.risk=byrisk,tpoints.add=tpoints.add,risk.cex=risk.cex,
                                    stop.onerror=TRUE,Xlab="Months",Ylab="",details=details,show.Y.axis=FALSE,
                                    ymin=ymin,show.logrank=show.logrank,show.med=show.med,show.cox=TRUE)
-  title(sub=sub2)
+  title(sub=subtitle2)
   
   
   cpoints <- km.fit$cpoints
