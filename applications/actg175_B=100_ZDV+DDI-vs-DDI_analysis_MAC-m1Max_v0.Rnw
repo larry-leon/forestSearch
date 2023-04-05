@@ -97,12 +97,14 @@ source(paste0(codepath,"source_forestsearch_v0.R"))
 source_fs_functions(file_loc=codepath)
 
 # Output grf, fs, and fs bootstrap
-outgrf<-c("output/actg_2v3_grf.Rdata")
+#outgrf<-c("output/actg_2v3_grf.Rdata")
 outfs<-c("output/actg_2v3_fs.Rdata")
-# Boots=500
-outfsboot<-c("output/actg_2v3_fsboot_B=500.Rdata")
+# Boots=2000
+outfsboot<-c("output/actg_2v3_fsboot_B=100.Rdata")
 # Set to null if not outputting
-#outgrf<-outfs<-outfsboot<-NULL
+outgrf<-NULL
+#outfs<-NULL
+#outfsboot<-NULL
 @
 
 
@@ -269,7 +271,7 @@ d.min<-5 # Min number of events for both arms (d0.min=d1.min=d.min)
 
 sg_focus<-"hr"
 split_method<-"Random"
-pstop_futile<-0.3
+pstop_futile<-0.30
 # Stops the consistency evaluation after first subgroup with consistency below pstop_futile
 # With idea that since SG's are sorted by hazard ratio estimates, once consistency is below 
 # pstop_futile it seems unlikely that SG's with lower hr's will reach the required 
@@ -314,9 +316,9 @@ cat("Minutes and hours for FS estimation",c(t.min,t.min/60),"\n")
 # Compare with GRF
 layout(matrix(c(1,2,3,4), 2, 2, byrow = TRUE))
 plot.subgroup(sub1=df0.grf,sub1C=df1.grf,tte.name="time_days",event.name="cens",treat.name="treat",fix.rows=FALSE,
-              byrisk=200,show.med=FALSE,ymin=0.4,subtitle1="(a)",subtitle2="(b)")
+              byrisk=200,show.med=FALSE,ymin=0.4,subtitle1="(a)",subtitle2="(b)",xlab="Days")
 plot.subgroup(sub1=df0.fs,sub1C=df1.fs,tte.name="time_days",event.name="cens",treat.name="treat",fix.rows=FALSE,
-              byrisk=200,show.med=FALSE,ymin=0.4,subtitle1="(c)",subtitle2="(d)")
+              byrisk=200,show.med=FALSE,ymin=0.4,subtitle1="(c)",subtitle2="(d)",xlab="Days")
 @
 \end{center}
 \end{figure}
@@ -341,7 +343,7 @@ fs.splits<-1000
 max.minutes<-6.0
 
 # Suggest running 50, first ... to get timing estimate
-NB<-500
+NB<-100
 
 df_temp<-fs.est$df.pred[,c("id","treat.recommend")]
 dfa<-merge(df.analysis,df_temp,by="id")
@@ -476,7 +478,7 @@ options(knitr.kable.NA = '.',format="latex")
 tab_actg<-kbl(resf,longtable=FALSE,align='c',format="latex",booktabs=TRUE,escape=F,digits=3,
 caption="\\label{tab:actg} ACTG-175 FS Analysis: Cox hazard ratio (HR) estimates for the ITT population and subgroups $H$ and $H^{c}$.
 Cox model estimates are based on subgroups: The estimated subgroup $\\hat{H}$; and 
-the bootstrap ($B=500$) bias-correction to $\\hat{H}$ estimates, denoted $\\hat{H}_{bc}$.  Estimates for the complement $H^{c}$ are defined analogously.
+the bootstrap ($B=100$) bias-correction to $\\hat{H}$ estimates, denoted $\\hat{H}_{bc}$.  Estimates for the complement $H^{c}$ are defined analogously.
 The number of subjects in each population ($\\#$ Subjects) are listed.") %>%
 kable_styling(full_width = FALSE, font_size=9,latex_options="hold_position") %>%
 group_rows("ITT", 1, 1) %>%

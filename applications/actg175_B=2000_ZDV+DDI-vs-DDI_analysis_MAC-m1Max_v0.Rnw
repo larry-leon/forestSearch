@@ -97,12 +97,13 @@ source(paste0(codepath,"source_forestsearch_v0.R"))
 source_fs_functions(file_loc=codepath)
 
 # Output grf, fs, and fs bootstrap
-outgrf<-c("output/actg_2v3_grf.Rdata")
-outfs<-c("output/actg_2v3_fs.Rdata")
-# Boots=500
-outfsboot<-c("output/actg_2v3_fsboot_B=500.Rdata")
+#outgrf<-c("output/actg_2v3_grf.Rdata")
+#outfs<-c("output/actg_2v3_fs.Rdata")
+# Boots=2000
+outfsboot<-c("output/actg_2v3_fsboot_B=2000.Rdata")
 # Set to null if not outputting
-#outgrf<-outfs<-outfsboot<-NULL
+outgrf<-outfs<-NULL
+#outfsboot<-NULL
 @
 
 
@@ -341,7 +342,7 @@ fs.splits<-1000
 max.minutes<-6.0
 
 # Suggest running 50, first ... to get timing estimate
-NB<-500
+NB<-2000
 
 df_temp<-fs.est$df.pred[,c("id","treat.recommend")]
 dfa<-merge(df.analysis,df_temp,by="id")
@@ -476,7 +477,7 @@ options(knitr.kable.NA = '.',format="latex")
 tab_actg<-kbl(resf,longtable=FALSE,align='c',format="latex",booktabs=TRUE,escape=F,digits=3,
 caption="\\label{tab:actg} ACTG-175 FS Analysis: Cox hazard ratio (HR) estimates for the ITT population and subgroups $H$ and $H^{c}$.
 Cox model estimates are based on subgroups: The estimated subgroup $\\hat{H}$; and 
-the bootstrap ($B=500$) bias-correction to $\\hat{H}$ estimates, denoted $\\hat{H}_{bc}$.  Estimates for the complement $H^{c}$ are defined analogously.
+the bootstrap ($B=2000$) bias-correction to $\\hat{H}$ estimates, denoted $\\hat{H}_{bc}$.  Estimates for the complement $H^{c}$ are defined analogously.
 The number of subjects in each population ($\\#$ Subjects) are listed.") %>%
 kable_styling(full_width = FALSE, font_size=9,latex_options="hold_position") %>%
 group_rows("ITT", 1, 1) %>%
