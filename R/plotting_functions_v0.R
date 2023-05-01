@@ -2,7 +2,10 @@
 # Some plotting functions
 
 plot_onesample<-function(df,tte.name,event.name,treat.name,wgt.name=NULL,xloc1=NULL,xloc2=NULL,details=FALSE,show.logrank=FALSE,
-                         exp.lab="Treat",con.lab="Control",legend.cex=0.70,risk.cex=0.65,yloc1=0.6,yloc2=0.6,subid=NULL,byrisk=2,fix.rows=TRUE,show.med=TRUE,ylab="Survival"){
+                         show.cox=TRUE,censor.cex=1,cox.cex=0.7,prob.points=c(0,0.25,0.5,0.75,1.0),
+                         show.Y.axis=TRUE, cex_Yaxis=1,
+                         exp.lab="Treat",con.lab="Control",legend.cex=0.70,risk.cex=0.65,yloc1=0.6,yloc2=0.6,subid=NULL,byrisk=2,fix.rows=TRUE,show.med=TRUE,
+                         ylab="Survival",xlab="Months"){
   if(is.null(wgt.name)){
     df$wgt<-rep(1,nrow(df)) 
   }
@@ -11,8 +14,9 @@ plot_onesample<-function(df,tte.name,event.name,treat.name,wgt.name=NULL,xloc1=N
   
   km.fit<-KM.plot.2sample.weighted(Y=df[,c(tte.name)],E=df[,c(event.name)],Treat=df[,c(treat.name)],Weight=df$wgt,
                                    risk.set=TRUE,by.risk=byrisk,tpoints.add=tpoints.add,risk.cex=risk.cex,
-                                   stop.onerror=TRUE,Xlab="Months",Ylab=ylab,details=details,
-                                   show.logrank=show.logrank,show.med=show.med,show.cox=TRUE)
+                                   prob.points=prob.points,cex_Yaxis=cex_Yaxis,show.Y.axis=show.Y.axis,
+                                   stop.onerror=TRUE,Xlab=xlab,Ylab=ylab,details=details,censor.cex=censor.cex,
+                                   show.logrank=show.logrank,show.med=show.med,show.cox=show.cox,cox.cex=cox.cex)
   cpoints <- km.fit$cpoints
   
   m1<-round(km.fit$med.1,2)
@@ -20,13 +24,11 @@ plot_onesample<-function(df,tte.name,event.name,treat.name,wgt.name=NULL,xloc1=N
   
   if(is.null(xloc1)) xloc1<-c(diff(range(cpoints))/2)  
   
-  #if(!show.med) legend(xloc1, yloc1, c(paste(c(exp.lab,eval(parse(text=m1))),collapse="; med="), paste(c(con.lab,eval(parse(text=m0))),collapse="; med=")), 
-  #                     col = c("black","blue"), lwd = 2, bty = "n", cex=legend.cex)
-  #if(show.med) legend(xloc1, yloc1, c(exp.lab, con.lab), col = c("black","blue"), lwd = 2, bty = "n")
-  
-  if(!show.med) legend("top", c(paste(c(exp.lab,eval(parse(text=m1))),collapse="; med="), paste(c(con.lab,eval(parse(text=m0))),collapse="; med=")), 
-                       col = c("black","blue"), lwd = 2, bty = "n", cex=legend.cex)
-  if(show.med) legend("top", c(exp.lab, con.lab), col = c("black","blue"), lwd = 2, bty = "n")
+  if(show.med){
+  legend("top", c(paste(c(exp.lab,eval(parse(text=m1))),collapse="; med="), paste(c(con.lab,eval(parse(text=m0))),collapse="; med=")), 
+  col = c("black","blue"), lwd = 2, bty = "n", cex=legend.cex)
+  }
+  if(!show.med) legend("top", c(exp.lab, con.lab), col = c("black","blue"), lwd = 2, bty = "n", cex=legend.cex)
   
 }  
 
@@ -36,9 +38,8 @@ plot_onesample<-function(df,tte.name,event.name,treat.name,wgt.name=NULL,xloc1=N
 # For plotting subgroups and the complement
 
 plot.subgroup<-function(tte.name,event.name,treat.name,wgt.name=NULL,sub1,sub1C,xloc1=NULL,xloc2=NULL,details=FALSE,show.logrank=FALSE,
-                        subtitle1="(a)",subtitle2="(b)",
-                        ymin=0,exp.lab="Treat",con.lab="Control",legend.cex=0.70,risk.cex=0.65,yloc1=0.6,
-                        yloc2=0.6,subid=NULL,byrisk=2,fix.rows=TRUE,show.med=TRUE,ylab="Survival",xlab="Months"){
+                        ymin=0,cox.cex=0.7,prob.points=c(0,0.25,0.5,0.75,1.0),cex_Yaxis=1,
+                        exp.lab="Treat",con.lab="Control",legend.cex=0.70,risk.cex=0.65,yloc1=0.6,yloc2=0.6,subid=NULL,byrisk=2,fix.rows=TRUE,show.med=TRUE,ylab="Survival"){
   
   if(is.null(wgt.name)){
     sub1$wgt<-rep(1,nrow(sub1)) 
@@ -59,9 +60,9 @@ plot.subgroup<-function(tte.name,event.name,treat.name,wgt.name=NULL,sub1,sub1C,
   df<-sub1
   km.fit<-KM.plot.2sample.weighted(Y=df[,c(tte.name)],E=df[,c(event.name)],Treat=df[,c(treat.name)],Weight=df$wgt,
                                    risk.set=TRUE,by.risk=byrisk,tpoints.add=tpoints.add,risk.cex=risk.cex,
-                                   stop.onerror=TRUE,Xlab=xlab,Ylab=ylab,details=details,
-                                   ymin=ymin,show.logrank=show.logrank,show.med=show.med,show.cox=TRUE)
-  title(sub=subtitle1)
+                                   cex_Yaxis=cex_Yaxis,
+                                   stop.onerror=TRUE,Xlab="Months",Ylab=ylab,details=details,prob.points=prob.points,
+                                   ymin=ymin,show.logrank=show.logrank,show.med=show.med,show.cox=TRUE,cox.cex=cox.cex)
   cpoints <- km.fit$cpoints
   
   m1<-round(km.fit$med.1,2)
@@ -88,10 +89,9 @@ plot.subgroup<-function(tte.name,event.name,treat.name,wgt.name=NULL,sub1,sub1C,
   
   km.fit<-KM.plot.2sample.weighted(Y=df[,c(tte.name)],E=df[,c(event.name)],Treat=df[,c(treat.name)],Weight=df$wgt,
                                    risk.set=TRUE,by.risk=byrisk,tpoints.add=tpoints.add,risk.cex=risk.cex,
-                                   stop.onerror=TRUE,Xlab=xlab,Ylab="",details=details,show.Y.axis=FALSE,
-                                   ymin=ymin,show.logrank=show.logrank,show.med=show.med,show.cox=TRUE)
-  title(sub=subtitle2)
-  
+                                   stop.onerror=TRUE,Xlab="Months",Ylab="",details=details,show.Y.axis=FALSE,
+                                   ymin=ymin,cox.cex=cox.cex,cex_Yaxis=cex_Yaxis,
+                                   show.logrank=show.logrank,show.med=show.med,show.cox=TRUE)
   
   cpoints <- km.fit$cpoints
   m1<-round(km.fit$med.1,2)
@@ -129,10 +129,11 @@ KM.plot.2sample.weighted<-function(Y,E,Treat,Covariates=NULL,Weight=rep(1,length
                                    plotit=TRUE,
                                    ltys=c(1,1),lwds=c(1,1),
                                    quant=0.5,
-                                   censor.mark.all=TRUE,show.ticks=TRUE,risk.set=TRUE,
+                                   censor.mark.all=TRUE,censor.cex=1.0,
+                                   show.ticks=TRUE,risk.set=TRUE,
                                    ymin=0,ymax=1,
                                    ymin2=NULL,
-                                   y.risk2=NULL,show.Y.axis=TRUE,
+                                   y.risk2=NULL,show.Y.axis=TRUE,cex_Yaxis=1,
                                    y.risk1=NULL,
                                    add.segment=FALSE,risk.add=NULL,xmin=0,xmax=NULL,x.truncate=NULL,time.zero=0.0,prob.points=c(seq(0.1,1.0,by=0.1))){
   
@@ -163,18 +164,18 @@ KM.plot.2sample.weighted<-function(Y,E,Treat,Covariates=NULL,Weight=rep(1,length
   
   if(!is.null(Covariates)){ 
     coxfit<-coxph(Surv(Y,E)~Treat+Covariates)  
-    hr.ci<-as.matrix(round(summary(coxfit)$conf.int,4))
+    hr.ci<-as.matrix(round(summary(coxfit)$conf.int,3))
     pval.cox<-summary(coxfit)$coefficients[1,5]
   }
   if(is.null(Covariates)){ 
     coxfit<-coxph(Surv(Y,E)~Treat)  
-    hr.ci<-as.matrix(round(summary(coxfit)$conf.int,4))
+    hr.ci<-as.matrix(round(summary(coxfit)$conf.int,3))
     pval.cox<-summary(coxfit)$coefficients[5]
   }
   # ipw weighting
   if(is.null(Covariates) & !all(Wgt==1)){ 
     coxfit<-coxph(Surv(Y,E)~Treat,weights=Wgt)
-    hr.ci<-as.matrix(round(summary(coxfit)$conf.int,4))
+    hr.ci<-as.matrix(round(summary(coxfit)$conf.int,3))
     pval.cox<-summary(coxfit)$coefficients[5]
   }
   
@@ -395,16 +396,16 @@ KM.plot.2sample.weighted<-function(Y,E,Treat,Covariates=NULL,Weight=rep(1,length
     lines(at.points2.plot,Y2.plot,lty=ltys[2],type="s",col=col.2,lwd=lwds[2])
     
     if(show.ticks==TRUE){
-      points(x1.cens,Y1[x1.match],pch=3,col=col.1)
-      points(x2.cens,Y2[x2.match],pch=3,col=col.2)
+      points(x1.cens,Y1[x1.match],pch=3,col=col.1,cex=censor.cex)
+      points(x2.cens,Y2[x2.match],pch=3,col=col.2,cex=censor.cex)
     }
     
     #if(what.toplot=="KM") abline(v=0,col="grey",lwd=3,lty=2)
     
     abline(h=ymin-0.035,lty=1,col=1)
     #axis(2,at=c(0.0,0.2,0.4,0.5,0.6,0.8,1.0))
-    if(show.Y.axis) axis(2,at=c(prob.points))
-    axis(1,at=risk.points,labels=c(risk.points+time.zero))
+    if(show.Y.axis) axis(2,at=c(prob.points),cex.axis=cex_Yaxis)
+    axis(1,at=risk.points,labels=c(risk.points+time.zero),cex.axis=cex_Yaxis)
     #axTicks(side=1, axp =c(risk.points+5.25))
     
     box()
