@@ -1,11 +1,8 @@
-#cs.forest<-try(suppressWarnings(causal_survival_forest(X,Y,W,D,W.hat=0.5,horizon=tau.rmst,mtry=ncol(X))),TRUE)
-#cs.forest<-try(suppressWarnings(causal_survival_forest(X,Y,W,D,W.hat=0.5,horizon=tau.rmst)),TRUE)
 
-grf.subg.harm.survival<-function(data,confounders.name,outcome.name,event.name,id.name,treat.name,frac.tau=1.0,n.min=60,dmin.grf=0.0,details=FALSE,sg.criterion="mDiff",maxdepth=2){
-set.seed(8316951)
-
+grf.subg.harm.survival<-function(data,confounders.name,outcome.name,event.name,id.name,treat.name,frac.tau=1.0,n.min=60,dmin.grf=0.0,
+RCT=TRUE, details=FALSE,sg.criterion="mDiff",maxdepth=2,seedit=8316951){
 if(maxdepth>3) stop("Max depth at most 3")  
-  
+
 temp<-as.matrix(data[,confounders.name])
 # Convert to numeric
 X<-apply(temp,2,as.numeric)
@@ -13,10 +10,10 @@ Y<-data[,outcome.name]
 W<-data[,treat.name]
 D<-data[,event.name]
 
-
 tau.rmst<-frac.tau*min(c(max(Y[W==1 & D==1]),max(Y[W==0 & D==1])))
 
-cs.forest<-try(suppressWarnings(causal_survival_forest(X,Y,W,D,W.hat=0.5,horizon=tau.rmst)),TRUE)
+if(RCT) cs.forest<-try(suppressWarnings(causal_survival_forest(X,Y,W,D,W.hat=0.5,horizon=tau.rmst,seed=seedit)),TRUE)
+if(!RCT) cs.forest<-try(suppressWarnings(causal_survival_forest(X,Y,W,D,horizon=tau.rmst,seed=seedit)),TRUE)
 
 ######################################################
 # NOTE: GRF can assign all subjects to *a* treatment
@@ -60,16 +57,11 @@ values2 <- aggregate(dr.scores, by = list(leaf.node = data$predict2.node),
                      FUN = function(x) c(mean = mean(x), size=length(x), se = sd(x) / sqrt(length(x))))
 values2$diff<-values2$control[,"mean"]-values2$treated[,"mean"]
 values2$Nsg<-values2$control[,"size"]
-
 values2<-values2[which(values2$control[,"size"]>=n.min),]
-
 values2$depth<-2.0
 }
-
 if(maxdepth==2) values<-rbind(values1,values2)
-
 tree3 <- NULL
-
 # At most depth=3
 if(maxdepth==3){
 tree3 <- policy_tree(X, dr.scores, depth = 3)
@@ -78,27 +70,21 @@ values3 <- aggregate(dr.scores, by = list(leaf.node = data$predict3.node),
                      FUN = function(x) c(mean = mean(x), size=length(x), se = sd(x) / sqrt(length(x))))
 values3$diff<-values3$control[,"mean"]-values3$treated[,"mean"]
 values3$Nsg<-values3$control[,"size"]
-
 values3<-values3[which(values3$control[,"size"]>=n.min),]
-
 values3$depth<-3.0
-
 values<-rbind(values1,values2,values3)
 }
-
 
 if(sg.criterion=="mDiff"){
 loc.max<-which.max(values$diff)
 max.diff<-values[loc.max,]
 }
 
-
 if(sg.criterion=="Nsg"){
   values_new<-values[values$diff>=dmin.grf,]
   loc.max<-which.max(values_new$Nsg)
   max.diff<-values_new[loc.max,]
 }
-
 
 if(max.diff$depth==1){
 data$predict.node<-data$predict1.node 
@@ -115,9 +101,10 @@ tree<-tree3
 
 if(details){
 cat("tau, maxdepth=",c(tau.rmst,maxdepth),"\n")
-print(values)
-print(max.diff)
-#print(max.diff[,"diff"])
+temp <- values[,c("leaf.node","control","depth")]
+print(round(temp,2))
+temp <- max.diff[,c("leaf.node","control","depth")]
+print(round(temp,2))
 }
   
 harm.est<-NULL
@@ -221,13 +208,11 @@ for(tt in 1:length(tnodes)){
 }
 
 if(details & max.diff[,"diff"] >= dmin.grf & max.diff[,"Nsg"] < n.max){
-cat_rule(col="green")
-cat_line("GRF subgroup found",col="blue")
-cat_line("All splits",col="grey")
-print(Vsg_cuts)
-cat_line("Terminating node at max.diff (sg.harm.id)",col="grey")
+cat("GRF subgroup found","\n")
+cat("All splits","\n")
+print(Vsg_cuts,2)
+cat("Terminating node at max.diff (sg.harm.id)","\n")
 print(vmax)
-cat_rule(col="green")
 }
   
 result<-list(data=data,
@@ -246,9 +231,7 @@ tree=tree,tau.rmst=tau.rmst,tree1=tree1,tree2=tree2,tree3=tree3)
 }
 if(max.diff[,"diff"]<dmin.grf | max.diff[,"Nsg"] >= n.max){
 if(details){
-cat_rule(col="yellow")
-cat_line("GRF subgroup NOT found",col="red")
-cat_rule(col="yellow")
+cat("GRF subgroup NOT found","\n")
 }
     
   

@@ -263,8 +263,6 @@ var_summary<-function(res){
 
 
 # Functions used in bootstrap operating characteristics
-
-
 # Replicates coxph
 getci_Cox<-function(df,est,se,target,alpha=0.025,digits=3){
   a<-df[est]
@@ -282,8 +280,6 @@ getci_Cox<-function(df,est,se,target,alpha=0.025,digits=3){
   cov<-ifelse(c>=lb & c<=ub,1,0)
   return(list(lb=round(lb,3),ub=round(ub,3),cover=cov))
 }
-
-
 # Return avg, SD rounded to 3
 SummaryStat<-function(df,name,sigdig=2,includeSD=FALSE,showSD=TRUE){
   if(is.data.table(df)){

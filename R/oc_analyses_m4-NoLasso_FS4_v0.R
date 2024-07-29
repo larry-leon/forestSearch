@@ -1,6 +1,6 @@
 
 # Default parameters
-oc_analyses_m4_FS4<-function(sim){
+oc_analyses_m4NoLasso_FS4<-function(sim){
   
   ans.analyses<-NULL  
   
@@ -45,7 +45,7 @@ showsim <- FALSE
 if(sim <= 1 | sim>=(Nsims-1)) showsim <- TRUE
 
   if(get.FS){
-    use_lasso <- TRUE
+    use_lasso <- FALSE
     use_grf <- FALSE
     
     ansFS<-NULL
@@ -87,7 +87,7 @@ if(sim <= 1 | sim>=(Nsims-1)) showsim <- TRUE
   if(get.FS){
     ansFS<-NULL
     analysis<-"FSlg"
-    use_lasso <- TRUE
+    use_lasso <- FALSE
     use_grf <- TRUE
   
     y.fs<-try(forestsearch(df.analysis=x, Allconfounders.name=confounders.name,

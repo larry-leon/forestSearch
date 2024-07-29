@@ -24,18 +24,16 @@ n.split<-round(nrow(df)/2,0)
 }
 
 
-sg_consistency_out<-function(df,result_new,sg_focus,index.Z,names.Z,details=FALSE,plot.sg=FALSE,by.risk=6,confs_labels){
+sg_consistency_out<-function(df,result_new,sg_focus,index.Z,names.Z,details=FALSE,plot.sg=FALSE,by.risk=4,confs_labels){
 
 if(sg_focus=="hr") setorder(result_new,-Pcons,K)
 # Choose sg with largest size 
 # Emphasis by Nsg, consistency, and smallest K
 if(sg_focus %in% c("Nsg","Nsg_only")) setorder(result_new,-N,-Pcons,K)
 if(sg_focus %in% c("Msg","Msg_only")) setorder(result_new,N,-Pcons,K)
-
 this.1<-NULL
 data.found<-NULL
 grp1<-NULL
-
   # show (up to) top 10
   if(details){
     cat("Number of subgroups meeting consistency criteria=","\n")
@@ -46,14 +44,11 @@ grp1<-NULL
   if(nrow(result_new)==1){
     top_result<-result_new  
   }
-  
   if(nrow(result_new)>1){
     top_result<-result_new[1,]
   }
-  
   grp1<-as.numeric(top_result$g)
   m1<-as.numeric(top_result$m)
-  
   index1<-as.numeric(unlist(index.Z[m1,]))
   this.1<-names.Z[index1==1]
   
@@ -115,7 +110,6 @@ if(sg_focus=="Nsg_only") found.hrs<-found.hrs[order(found.hrs$n,decreasing=TRUE)
   
 if(sg_focus=="Msg_only") found.hrs<-found.hrs[order(found.hrs$n,decreasing=FALSE),]
 
-
 n.groups<-0 
   
 # Extract sg factors
@@ -130,20 +124,23 @@ this.1<-NULL
 any.found<-0
 p.consistency<-0
 stop_futile<-FALSE
-
   if(details){
     t.start<-proc.time()[3]
-    cat("Subgroups (1st 10) meeting overall screening thresholds (HR, m1) sorted by HRs=",c(m1.threshold),"\n")
-    print(round(found.hrs[1:10,-c(1)],2))
+    cat("SGs (1st 10) meeting screening thresholds sorted by sg_focus=",c(sg_focus),"\n")
+    # Show up to first 6 factors
+    nZ <- nrow(index.Z)
+    n10 <- min(nZ,10)
+    k10 <- min(nrow(found.hrs),10)
+    temp <- found.hrs[,c("n","E","d1","HR","L(HR)")]
+    temp <- as.data.frame(temp)
+    temp <- cbind(temp,index.Z[,1:n10])
+    print(round(temp[1:k10,],2))
   }  
-  
-    
   for(m in 1:nrow(found.hrs)){
   # Stopping at first sg exceeding stop.threshold
   # Or stopping after first sg below pstop_futile
   # Since HR's are sorted, chance of meeting 90% likely "futile"
     if(p.consistency<stop.threshold & !stop_futile){
-      
       indexm<-as.numeric(unlist(index.Z[m,]))
       this.m<-names.Z[indexm==1]
       n.groups<-n.groups+1
@@ -253,17 +250,106 @@ t.end<-proc.time()[3]
 t.min<-(t.end-t.start)/60
 cat("Subgroup Consistency Minutes=",c(t.min),"\n")
 if(any.found>0){
-cat_rule(col="green")
-cat_line("Subgroup found (FS)",col="purple")
-cat_rule(col="green")
+cat("Subgroup found (FS)","\n")
 }
 if(any.found==0){
-cat_rule(col="yellow")
-cat_line("NO subgroup found (FS)",col="red")
-cat_rule(col="yellow")
+cat("NO subgroup found (FS)","\n")
   }
 }
 out<-list(out_hr=out_hr,out_Nsg=out_Nsg,out_Msg=out_Msg,df_flag=df_flag,sg.harm=this.1,sg.harm.id=sg.harm.id)
 return(out)
+}
+
+
+# For plotting subgroups and the complement
+
+plot.subgroup<-function(tte.name,event.name,treat.name,weight.name=NULL,
+                        strata.name=NULL,sub1,sub1C,xloc1=NULL,xloc2=NULL,details=FALSE,show.logrank=FALSE,
+                        ymin=0,cox.cex=0.6,prob.points=c(0,0.25,0.5,0.75,1.0),
+                        cex_Yaxis=1,title1=NULL,title2=NULL,choose_ylim=TRUE,
+                        exp.lab="Treat",con.lab="Control",legend.cex=0.60,risk.cex=0.60,
+                        yloc1=0.6,yloc2=0.6,subid=NULL,byrisk=2,fix.rows=TRUE,show.med=FALSE,ylab="Survival"){
+  
+  
+  if(!is.null(subid) & (!is.null(title1) | !is.null(title2))) stop("subid OR titles need to be specified (not both)")
+  
+  #if(is.null(weight.name)){
+  #  sub1$wgt<-rep(1,nrow(sub1)) 
+  #  sub1C$wgt<-rep(1,nrow(sub1C))
+  #}
+  
+  #if(!is.null(wgt.name)){
+  #  sub1$wgt<-sub1[,c(wgt.name)] 
+  #  sub1C$wgt<-sub1C[,c(wgt.name)]
+  #}
+  
+  # Set tpoints.add to span range of both subgroups
+  aa<-max(sub1[,c(tte.name)])
+  bb<-max(sub1C[,c(tte.name)])
+  tpoints.add<-c(-1,max(aa,bb))
+  
+  if(fix.rows) par(mfrow=c(1,2))
+  df<-sub1
+  
+  km.fit<-KM.plot.2sample.weighted(df=df, tte.name=tte.name,event.name=event.name, treat.name=treat.name,
+                                   weight.name=weight.name,strata.name=strata.name,
+                                   show_arm_legend=FALSE,
+                                   risk.set=TRUE,by.risk=byrisk,tpoints.add=tpoints.add,risk.cex=risk.cex,
+                                   cex_Yaxis=cex_Yaxis,choose_ylim=choose_ylim,
+                                   stop.onerror=TRUE,Xlab="Months",Ylab=ylab,details=details,prob.points=prob.points,
+                                   ymin=ymin,show.logrank=show.logrank,
+                                   show.med=TRUE,show.cox=TRUE,cox.cex=cox.cex,med.cex=cox.cex,qlabel="med=")
+  cpoints <- km.fit$cpoints
+  
+  m1<-round(km.fit$med.1,1)
+  m0<-round(km.fit$med.2,1)
+  
+  if(is.null(xloc1)) xloc1<-c(diff(range(cpoints))/2)  
+  
+  #if(!show.med) legend(xloc1, yloc1, c(paste(c(exp.lab,eval(parse(text=m1))),collapse="; med="), paste(c(con.lab,eval(parse(text=m0))),collapse="; med=")), 
+  #                     col = c("black","blue"), lwd = 2, bty = "n", cex=legend.cex)
+  #if(show.med) legend(xloc1, yloc1, c(exp.lab, con.lab), col = c("black","blue"), lwd = 2, bty = "n")
+  
+  if(show.med){
+    legend("top", c(paste(c(exp.lab,eval(parse(text=m1))),collapse="; med="), paste(c(con.lab,eval(parse(text=m0))),collapse="; med=")), 
+           col = c("black","blue"), lwd = 2, bty = "n", cex=legend.cex)
+  }
+  if(!show.med) legend("top", c(exp.lab, con.lab), col = c("black","blue"), lwd = 2, bty = "n", cex=legend.cex)
+  
+  #legend("top",c(subid),bty="n",cex=0.7)
+  if(!is.null(subid)) title(main=subid,cex.main=0.80)
+  if(!is.null(title1)) title(main=title1,cex.main=0.80)
+  
+  df<-sub1C
+  
+  km.fit<-KM.plot.2sample.weighted(df=df, tte.name=tte.name,event.name=event.name, treat.name=treat.name,
+                                   weight.name=weight.name,strata.name=strata.name,
+                                   show_arm_legend=FALSE,
+                                   risk.set=TRUE,by.risk=byrisk,tpoints.add=tpoints.add,risk.cex=risk.cex,
+                                   cex_Yaxis=cex_Yaxis,choose_ylim=choose_ylim,
+                                   stop.onerror=TRUE,Xlab="Months",Ylab=ylab,details=details,prob.points=prob.points,
+                                   ymin=ymin,show.logrank=show.logrank,
+                                   show.med=TRUE,show.cox=TRUE,cox.cex=cox.cex,med.cex=cox.cex,qlabel="med=")
+  
+  cpoints <- km.fit$cpoints
+  m1<-round(km.fit$med.1,1)
+  m0<-round(km.fit$med.2,1)
+  
+  if(is.null(xloc2)) xloc2<-c(diff(range(cpoints))/2)  
+  
+  if(show.med){
+    legend("top", c(paste(c(exp.lab,eval(parse(text=m1))),collapse="; med="), paste(c(con.lab,eval(parse(text=m0))),collapse="; med=")), 
+           col = c("black","blue"), lwd = 2, bty = "n",cex=legend.cex)
+  }  
+  if(!show.med) legend("top", c(exp.lab, con.lab), col = c("black","blue"), lwd = 2, bty = "n", cex=legend.cex)
+  
+  
+  #if(!show.med) legend(xloc2, yloc2, c(paste(c(exp.lab,eval(parse(text=m1))),collapse="; med="), paste(c(con.lab,eval(parse(text=m0))),collapse="; med=")), 
+  #                     col = c("black","blue"), lwd = 2, bty = "n",cex=legend.cex)
+  #if(show.med) legend(xloc2, yloc2, c(exp.lab, con.lab), col = c("black","blue"), lwd = 2, bty = "n")
+  
+  
+  if(!is.null(subid)) title(main="Complement",cex.main=0.80)
+  if(!is.null(title2)) title(main=title2,cex.main=0.80)
 }
 

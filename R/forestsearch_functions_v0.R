@@ -13,6 +13,7 @@ acm.disjctif<-function (df)
                                              sep = "."))
     return(x)
   }
+  
   # For FAC(df) with only single variable
   acm.util.df2 <- function(i) {
     cl <- df[, i]
@@ -26,11 +27,36 @@ acm.disjctif<-function (df)
     return(x)    
   }
   
-  if(!is.null(ncol(df)) & ncol(df)>1)  G <- lapply(1:ncol(df), acm.util.df)
-  if(!is.null(ncol(df)) & ncol(df)==1)  G <- lapply(1, acm.util.df2)
+  if(!is.null(ncol(df)) & ncol(df)>1) G <- lapply(1:ncol(df), acm.util.df)
+    
+  if(!is.null(ncol(df)) & ncol(df)==1) G <- lapply(1, acm.util.df2)
+    
   G <- data.frame(G, check.names = FALSE)
   return(G)
 }
+
+
+dummy2 <- function(df) {  
+  
+  NUM <- function(dataframe)dataframe[,sapply(dataframe,is.numeric)]
+  FAC <- function(dataframe)dataframe[,sapply(dataframe,is.factor)]
+  
+  if (is.null(ncol(NUM(df)))){
+    DF <- data.frame(NUM(df), acm.disjctif(FAC(df)))
+    names(DF)[1] <- colnames(df)[which(sapply(df, is.numeric))]
+  } else {
+    if (!is.null(ncol(FAC(df))) & ncol(FAC(df))>0) DF <- data.frame(NUM(df), acm.disjctif(FAC(df)))
+    if (!is.null(ncol(FAC(df))) | ncol(FAC(df))==0) DF <- data.frame(NUM(df))
+    
+    if (is.null(ncol(FAC(df)))){
+      temp<-as.matrix(FAC(df))  
+      colnames(temp)[1]<-colnames(df)[which(sapply(df, is.factor))]
+      df.fac<-acm.disjctif(temp)  
+      DF <- data.frame(NUM(df), df.fac)  
+    }
+  }
+  return(DF)
+} 
 
 
 dummy <- function(df) {  
@@ -43,9 +69,7 @@ dummy <- function(df) {
     names(DF)[1] <- colnames(df)[which(sapply(df, is.numeric))]
   } else {
     if (!is.null(ncol(FAC(df)))) DF <- data.frame(NUM(df), acm.disjctif(FAC(df)))
-    
-    
-    if (is.null(ncol(FAC(df)))){
+     if (is.null(ncol(FAC(df)))){
       temp<-as.matrix(FAC(df))  
       colnames(temp)[1]<-colnames(df)[which(sapply(df, is.factor))]
       df.fac<-acm.disjctif(temp)  
@@ -54,6 +78,8 @@ dummy <- function(df) {
   }
   return(DF)
 } 
+
+
 
 
 
@@ -89,9 +115,6 @@ df.test<-df.split2
 if(nrow(df.train)+nrow(df.test)!=nrow(df)) stop("Problem with cross-validation splitting (n(train)+n(est)!=n(all))")
 return(list(df.train=df.train,df.test=df.test))
 }
-
-
-
 
 # The following is not used but keeping just-in-case
 
@@ -186,20 +209,4 @@ cut.num<-function(x,cutpoint=median(x),direction="LTE"){
   }
   return(cut.x)
 }
-
-
-# Create J level quantiles
-#cut.jquants<-function(df,x.name,jq=10){
-#x<-df[,c(x.name)]
-#jq.seq<-seq(0,1,by=1/jq)  
-#x.jq<-quantile(x,c(jq.seq))
-# Remove min and max
-#x.jq<-x.jq[-c(1,length(x.jq))]
-# Labels for the levels
-#names.jq<-substr(names(x.jq),1,1)
-#x.byjq<-rep(NA,length(x))
-#for(1:length(x.jq)){
-#  }
-#jq.seq<-x.jq[-c(1,length(x.jq))]  
-#}
 

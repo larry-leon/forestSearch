@@ -64,12 +64,20 @@ if(model=="null"){
 
 
 if(details){
-fit<-KM.plot.2sample.weighted(Y=dfa$y,E=dfa$event,Treat=dfa$treat,risk.cex=0.6,
-                              risk.set=TRUE,by.risk=6,tpoints.add=c(-1),
-                              stop.onerror=TRUE,Xlab="Months",Ylab="Time to recurrence",
-                              show.logrank=FALSE,show.med=FALSE,show.cox=TRUE)
 
-legend("top", c("Treat", "Control"), col = c("black","blue"), lwd = 2, bty = "n")
+fit <- KM.plot.2sample.weighted(df=dfa, tte.name="y", event.name="event", treat.name="treat",
+                                  risk.set=TRUE, by.risk=6, risk.cex=0.80, censor.cex=0.80,
+                                  risk_offset=0.15, risk_delta=0.075,
+                                  Xlab="Months",Ylab="Recurrence-free survival", details=FALSE,
+                                  show.ticks=TRUE,
+                                  col.1="black", col.2="blue",
+                                  arms = c("Experimental","Control"), arm.cex=0.80,
+                                  ltys=c(1,1),lwds=c(2,2),
+                                  cox.cex=0.65,
+                                  show.logrank=FALSE, lr.digits=2, put.legend.lr="top",
+                                  show.med=FALSE,
+                                  show.cox=TRUE, cox.digits=3)
+
 }
 
 # Underlying covariates

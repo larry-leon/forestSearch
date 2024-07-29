@@ -7,9 +7,30 @@
 # Adding d.min to require min(Events) per treatment arm (d0.min for control, d1.min for treatment)
 # covs.in[isin,]<-unlist(lapply(covs.in[isin,],function(x){ifelse(x==1,0,1)})) # slower
 
+# Two-factor combinations
+# We just need a placeholder for possible combinations 
+# where at most 2 factor combinations are evaluated
+#
+#x1<-seq(0,1)  # Possible binomial realizations from sample of size n            
+#L <- 10 (5 factors, 2 levels each)
+#xx<-expand.grid(x1,x1,x1,x1,x1,x1,x1,x1,x1,x1)
+#xx<-expand.grid(x1,x1,x1,x1,x1,x1,x1,x1)
+#tot <- apply(xx,1,sum)
+#sum(tot >0 & tot <= 2)
+# L = 8 -- > 36
+#(2**L)-1
+# For L=10 there are 55
+# L=10 -> 55
+# L=12 --> 78
+# L=13 --> 91
+# L=20 --> 210 (10 factors, 2 levels each)
+# L=30 (15 factors 2 levels each)
+# Not feasible in this manner
+# Set placeholder to 2,000
+
 # Removing ID storage since not needed
 subgroup.search<-function(Y,Event,Treat,ID=NULL,Z,n.min=30,d0.min=15,d1.min=15,
-hr.threshold=1.0,max.minutes=30,minp=0.05,rmin=5,details=FALSE,maxk=2){
+hr.threshold=1.0,max.minutes=30,minp=0.05,rmin=5,details=FALSE,maxk=2,min_screen_target=NULL){
 
 non.redundant<-0.0
 ngroups.fit<-0.0
@@ -50,13 +71,14 @@ ngroups.meet<-0.0
   max_count <- ((L*(L-2)*(L-1))/6)+(L*(L-1)/2) + L  
   }
   
-if(details){
-##cat("Number of unique levels (L) and all-possible subgroups=",c(L,limit_all),"\n")
-##if(limit_all>10^6) cat("Number of all-possible subgroups (in millions)=",c(limit_all/(10^6)),"\n")
-cat("Number of possible configurations (<= maxk): maxk, # <= maxk",c(maxk,max_count),"\n")
+ if(details){
+    cat("Number of unique levels (L) and all-possible subgroups=",c(L,limit_all),"\n")
+    if(limit_all>10^6) cat("Number of all-possible subgroups (in millions)=",c(limit_all/(10^6)),"\n")
+   cat("Number of possible configurations <= maxk: maxk, #=",c(maxk,max_count),"\n")
    }
   # Track criteria not met for subgroup evaluation
   crit0.met <- 0.0
+  crit.fail0<-0
   # crit.fail0 is first criteria to be met
   # The following criteria are conditional on meeting crit.fail0
   crit.failure<-0
@@ -65,70 +87,33 @@ cat("Number of possible configurations (<= maxk): maxk, # <= maxk",c(maxk,max_co
   crit.failn<-0
   t.start<-proc.time()[3]
   t.sofar<-0
-
-  if(maxk==1){  
-    index_1factor <- t(combn(L, 1))
-    counts_1factor <- nrow(index_1factor)
-    tot_counts <- counts_1factor
-    if(tot_counts != max_count) stop("Error with maximum combinations kmax=2")
-  }
+  k_count <- 0.0
   
-  if(maxk==2){  
   index_2factor <- t(combn(L, 2))
   counts_2factor <- nrow(index_2factor)
   index_1factor <- t(combn(L, 1))
   counts_1factor <- nrow(index_1factor)
+  
+  if(!is.null(min_screen_target)) min_target <- min_screen_target
+  if(is.null(min_screen_target)) min_target <- max_count
+  
   tot_counts <- counts_2factor+counts_1factor
   if(tot_counts != max_count) stop("Error with maximum combinations kmax=2")
-  }
-  
-  if(maxk==3){  
-    index_3factor <- t(combn(L, 3))
-    counts_3factor <- nrow(index_3factor)
-    index_2factor <- t(combn(L, 2))
-    counts_2factor <- nrow(index_2factor)
-    index_1factor <- t(combn(L, 1))
-    counts_1factor <- nrow(index_1factor)
-    tot_counts <- counts_3factor+counts_2factor+counts_1factor
-    if(tot_counts != max_count) stop("Error with maximum combinations kmax=2")
-  }
   
   # Loop through single-factor subgroups first
   
   for(kk in 1:tot_counts){
   covs.in<-as.matrix(rep(0,L)) # Initially no members
-
   if(kk <= counts_1factor){
   which1 <- index_1factor[kk]  
   covs.in[which1] <- 1.0
   }
-
-  if(maxk==2){
   if(kk > counts_1factor){
   # reset kindex
   kk_new <- (kk-counts_1factor) 
   which1 <- index_2factor[kk_new,1]
   which2 <- index_2factor[kk_new,2]
   covs.in[c(which1,which2)] <- c(1.0,1.0)
-  }
-   }
-  
-  if(maxk==3){
-    if(kk > counts_1factor & kk <= (counts_1factor+counts_2factor)){
-      # reset kindex
-      kk_new <- (kk-counts_1factor) 
-      which1 <- index_2factor[kk_new,1]
-      which2 <- index_2factor[kk_new,2]
-      covs.in[c(which1,which2)] <- c(1.0,1.0)
-    }
-    if(kk > (counts_1factor+counts_2factor)){
-      # reset kindex
-      kk_new <- (kk-(counts_1factor+counts_2factor)) 
-      which1 <- index_3factor[kk_new,1]
-      which2 <- index_3factor[kk_new,2]
-      which3 <- index_3factor[kk_new,3]
-      covs.in[c(which1,which2,which3)] <- c(1.0,1.0,1.0)
-    }
   }
     ## We now have subgroup indices
     ## So extract subgroup membership
@@ -138,7 +123,7 @@ cat("Number of possible configurations (<= maxk): maxk, # <= maxk",c(maxk,max_co
     t.sofar<-c((t.now-t.start)/60)
     # Stop search algorithm if time exceeded: Output accumulated results
     if(t.sofar>max.minutes){ 
-    out.found<-NULL
+    out<-NULL
    if(details){
     cat("Time exceeding max.minutes, stopping search algorithm and continuing with SG's found so far [if any]","\n")
     }   
@@ -148,27 +133,26 @@ cat("Number of possible configurations (<= maxk): maxk, # <= maxk",c(maxk,max_co
         rownames(hr.out)<-NULL
         hr.out<-setorder(hr.out,-HR,K)
         out.found<-list(ngroups.fit=ngroups.fit,hr.subgroups=hr.out)
+        out<-list(out.found=out.found,time_search=t.sofar,
+                  max_sg_est=c(hr.out[1,"HR"]),L=L)
       }
       if(details){ 
-        cat("# of subgroups evaluated based on (up to) maxk-factor combinations",c(crit0.met),"\n")
+        cat("# of subgroups based on 2-factor combinations",c(crit0.met),"\n")
         cat("% of all-possible combinations (<= maxk)",c(100*round(crit0.met/max_count,3)),"\n")
         cat("# of subgroups=",c(non.redundant),"\n")
         cat("# of subgroups fitted=",c(ngroups.fit),"\n")
         cat("Minutes=",c(t.sofar),"\n")
       }    
-    
-    prop_max_count=c(100*round(crit0.met/max_count,3))
-    
-    out <-list(out.found=out.found,max_sg_est=max_sg_est,time_search=t.sofar,L=L,
-             max_count=max_count,prop_max_count=prop_max_count)
-    
-    return(out)
-    stop("Maximum timing exceeded")
+      return(out)
+      stop("Maximum timing exceeded")
     }
+    crit.fail0 <- crit.fail0+(k.in>maxk)
+    
     if(k.in <= maxk){
     crit0.met <- crit0.met+1
-    
+      
     if(details){
+      
       if(crit0.met==ceiling(max_count/20)){
         cat("Approximately 5% of max_count met: minutes",c(t.sofar),"\n")
       }
@@ -258,8 +242,10 @@ cat("Number of possible configurations (<= maxk): maxk, # <= maxk",c(maxk,max_co
   prop_max_count=c(100*round(crit0.met/max_count,3))
   
   if(details){
-    cat("# of subgroups evaluated based on (up to) maxk-factor combinations",c(crit0.met),"\n")
+    cat("k_count",c(k_count),"\n")
+    cat("# of subgroups based on 2-factor combinations",c(crit0.met),"\n")
     cat("% of all-possible combinations (<= maxk)",c(100*round(crit0.met/max_count,3)),"\n")
+    cat("# of subgroups based on # variables > k.max and excluded (per million)",c(sum(crit.fail0)/10^6),"\n")
     cat("k.max=",c(maxk),"\n")
     cat("Events criteria for control,exp=",c(d0.min,d1.min),"\n")
     cat("# of subgroups with events less than criteria: control, experimental",c(sum(crit.faild0),sum(crit.faild1)),"\n")

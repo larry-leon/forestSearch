@@ -1,0 +1,340 @@
+---
+title: "Reproduce simulated example in paper"
+author: "Larry Leon"
+output: html_document
+---
+
+```{=latex}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{longtable}
+\usepackage{enumerate}
+\usepackage{threeparttable}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{url}
+\usepackage[colorlinks=true,linkcolor={blue},citecolor={black},urlcolor={blue},runcolor={blue}]{hyperref}
+```
+
+```{r Rpackages, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(warn = -1)
+
+rm(list=ls())
+## Unnecessary packages commented out
+suppressMessages(library(kableExtra,quietly=TRUE))
+suppressMessages(library(knitr,quietly=TRUE))
+suppressMessages(library(randomForest,quietly=TRUE))
+suppressMessages(library(survival,quietly=TRUE))
+suppressMessages(library(grf,quietly=TRUE))
+suppressMessages(library(policytree,quietly=TRUE))
+suppressMessages(library(DiagrammeR,quietly=TRUE))
+suppressMessages(library(data.table,quietly=TRUE))
+suppressMessages(library(dplyr,quietly=TRUE))
+suppressMessages(library(glmnet,quietly=TRUE))
+# smd and gtsummary are for baseline summary table
+# omit if not desired (remove corresponding section below)
+suppressMessages(library(smd,quietly=TRUE)) # required for gtsummary
+suppressMessages(library(gtsummary,quietly=TRUE)) # only for baseline table summary
+suppressMessages(library(future,quietly=TRUE))
+# Speff2trial for ACTG-175 dataset
+#suppressMessages(library(speff2trial,quietly=TRUE))
+library(stringr)
+
+```
+
+```{r SetBootstrapCV, echo=TRUE, eval=TRUE}
+# Bootstrapping and cross-validation
+NB <- 1000 # Bootstraps
+tenfoldsims <- 20  #10-fold cross-validation sims
+
+# Point to where R code is stored
+codepath <- c("/media/larryleon/My Projects/GitHub/Forest-Search/Rcode/forestsearch/R/")
+# If storing output
+#outfile_name <-c("/media/larryleon/My Projects/GitHub/Forest-Search/paper/SBR/applications/simulated_ex1/output/simexample-paper_v0.Rdata")
+# setting to null
+outfile_name <- NULL
+
+source(paste0(codepath,"source_forestsearch_v0.R"))
+source_fs_functions(file_loc=codepath)
+
+ if(!exists("forestsearch")){
+ cat("Files not found when sourcing from:","\n")
+ print(paste0(codepath,"source_forestsearch_v0.R"))
+ stop("forestsearch code does not exist")  
+ }
+
+```
+
+## Simdatasetup  
+```{r Simdata, echo=TRUE, eval=TRUE}
+
+maxFollow<-84
+cens.type<-"weibull"
+# m1 -censoring
+muC.adj<-log(1.5)
+
+# m0-censoring (original data)
+#muC.adj<-0.0
+
+# only needed if outputting results tofile
+#model.index<-"m4a"
+#file.index<-"v0"
+
+mod.harm<-"alt"
+
+k.treat<-0.90
+k.z3<-1.0
+
+z1_frac<-0.25 # Default model index 'm1' (The 1st quartile of z1=er)
+pH_super<-0.125 # non-NULL re-defines z1_frac
+
+N<-1000
+
+hrH.target<-2.0
+
+if(is.null(pH_super)){
+#pH_check<-with(gbsg,mean(pgr<=quantile(pgr,c(z3_frac),1,0) & er<=quantile(er,z1_frac)))
+pH_check<-with(gbsg,mean(meno==0 & er<=quantile(er,z1_frac)))
+cat("Underlying pH_super",c(pH_check),"\n")
+}
+# pH_super specified
+# If pH_super then override  z1_frac and find z1_frac to yield pH_super
+
+if(!is.null(pH_super)){
+  # Approximate Z1 quantile to yield pH proportion  
+  z1_q<-uniroot(propH.obj4,c(0.0,1.0),tol=0.0001,pH.target=pH_super)$root
+  #pH_check<-with(gbsg,mean(pgr<=quantile(pgr,c(z3_frac),1,0) & er<=quantile(er,z1_q)))
+  pH_check<-with(gbsg,mean(meno==0 & er<=quantile(er,z1_q)))
+  cat("pH",c(pH_check),"\n")
+  rel_error<-(pH_super-pH_check)/pH_super
+  if(abs(rel_error)>=0.1) stop("pH_super approximation relative error exceeds 10%")
+  z1_frac<-z1_q
+  cat("Underlying pH_super",c(pH_check),"\n")
+}
+
+this.dgm<-get.dgm4(mod.harm=mod.harm,N=N,k.treat=k.treat,
+hrH.target=hrH.target,cens.type=cens.type,out.loc=NULL,details=TRUE,parms_torand=FALSE)
+
+dgm<-this.dgm$dgm
+
+# Adding 3 noise covariates
+n_add_noise <- 3
+sim <- 99
+
+x<-sim_aftm4_gbsg(dgm=dgm,n=N,maxFollow=maxFollow,muC.adj=muC.adj,simid=sim)
+
+if(n_add_noise==0){
+confounders.name <- c("z1","z2","z3","z4","z5","size","grade3")
+}
+  
+if(n_add_noise==5){
+  set.seed(8316951+1000*sim)
+  # Add 5 noise 
+  x$noise1 <- rnorm(N)
+  x$noise2 <- rnorm(N)
+  x$noise3 <- rnorm(N)
+  x$noise4 <- rnorm(N)
+  x$noise5 <- rnorm(N)
+  confounders.name <- c("z1","z2","z3","z4","z5","size","grade3","noise1","noise2","noise3","noise4","noise5")
+  }
+  
+  if(n_add_noise==3){
+    set.seed(8316951+1000*sim)
+    # Add 3 noise 
+    x$noise1 <- rnorm(N, sd=1)
+    x$noise2 <- rnorm(N, sd=1)
+    x$noise3 <- rnorm(N, sd=1)
+    confounders.name <- c("z1","z2","z3","z4","z5","size","grade3","noise1","noise2","noise3")
+  }
+
+
+```
+
+## Datasetup  
+```{r Datasetup, echo=TRUE, eval=TRUE}
+
+t.start.all<-proc.time()[3]
+
+df.analysis <- x[,c("y.sim","event.sim","treat","id",confounders.name)]
+
+outcome.name<-c("y.sim")
+event.name<-c("event.sim")
+id.name<-c("id")
+treat.name<-c("treat")
+
+# Calculate Cox and RMST
+itt_tab<-SGtab(df=df.analysis,SG_flag="ITT",outcome.name=outcome.name,event.name=event.name,treat.name=treat.name,draws=0)
+
+
+kmfit <- KM.plot.2sample.weighted(df=df.analysis, tte.name=outcome.name, event.name=event.name, treat.name=treat.name,
+risk.set=TRUE, by.risk=6, risk.cex=0.80, censor.cex=0.80,
+risk_offset=0.15, risk_delta=0.075,
+Xlab="Months",Ylab="Survival", details=FALSE,
+show.ticks=TRUE,
+col.1="black", col.2="blue",
+arms = c("Experimental","Control"), arm.cex=0.80,
+ltys=c(1,1),lwds=c(2,2),
+cox.cex=0.65,
+show.logrank=TRUE, lr.digits=2, put.legend.lr="top",
+show.med=FALSE,
+show.cox=TRUE, cox.digits=3)
+
+
+# For draws>0 (above) will calculate simultaneous band
+#plotband_survdiff(res=itt_tab$rmst_fit)
+
+print(itt_tab$res_out)
+
+#plot.subgroup(sub1=df.analysis,sub1C=df.analysis,tte.name="y.sim",event.name="event.sim",treat.name="treat",byrisk=12)
+
+
+```
+
+
+
+## GRF analysis  
+```{r GRF, echo=TRUE, eval=TRUE}
+
+## GRF
+grf_est1 <- grf.subg.harm.survival(data=df.analysis,
+confounders.name = confounders.name,
+outcome.name=outcome.name, event.name=event.name, id.name=id.name, treat.name=treat.name,
+maxdepth=2, n.min = 60, dmin.grf = 12, frac.tau=0.6, details=TRUE)
+```
+
+```{r GRFtrees, echo=TRUE, eval=TRUE}
+# NOTE: In general for GRF trees
+# leaf1 --> recommend control
+# leaf2 --> recommend treatment
+# Tree depth 1
+plot(grf_est1$tree1,leaf.labels=c("Control","Treat"))
+# Tree depth 2
+plot(grf_est1$tree2,leaf.labels=c("Control","Treat"))
+```
+
+## Forest Search analysis  
+```{r FS, echo=TRUE, eval=TRUE}
+
+t.start.fs<-proc.time()[3]
+
+use_lasso <- TRUE
+
+hr.threshold<-1.25   # Initital candidates 
+hr.consistency<-1.0  # Candidates for many splits
+pconsistency.threshold <- 0.9
+stop.threshold <- 0.95
+
+# recommend 0.5 in general
+pstop_futile<-0.7
+# recommend 1000
+fs.splits<-400 # How many times to split for consistency
+
+cut_type <- "median"
+
+fs.est <- forestsearch(df.analysis=df.analysis, Allconfounders.name=confounders.name,
+outcome.name=outcome.name,treat.name=treat.name,
+event.name=event.name,id.name=id.name,
+hr.threshold=hr.threshold,hr.consistency=hr.consistency,stop.threshold=stop.threshold,
+pconsistency.threshold=pconsistency.threshold, 
+pstop_futile=0.70,
+details=TRUE,
+use_lasso=use_lasso, 
+defaultcut_names=NULL,
+cut_type=cut_type,
+dmin.grf=12, frac.tau=0.60, grf_depth=2,
+maxk=2,
+sg_focus="hr",
+n.min=60,
+fs.splits=400,
+d0.min=10,d1.min=10,
+by.risk=12,
+plot.sg=TRUE)
+
+```
+
+## Forest Search Bootstrap dofuture (doF)  
+```{r FSbootstrap_doF, echo=TRUE, eval=TRUE}
+library(doFuture)
+library(doRNG)
+registerDoFuture()
+registerDoRNG()
+# workers=48 works well on popOS
+plan("multisession", workers=48)
+# Bootstrap bias-correction 
+fs_bc <- forestsearch_bootstrap_dofuture(fs.est=fs.est,nb_boots=NB,est.scale="hr",show_three=TRUE,details=TRUE)
+t.now<-proc.time()[3]
+tall.min<-(t.now-t.start.fs)/60
+cat("Minutes (total) for analysis + (doFuture) bootstrap",c(tall.min),"\n")
+# Reset workers to single
+plan(sequential)
+
+```
+
+## Forest Search n-fold cross-validation  
+```{r FSnfold, echo=TRUE, eval=TRUE}
+library(doFuture)
+library(doRNG)
+registerDoFuture()
+registerDoRNG()
+# # workers=48 works well on popOS
+plan("multisession", workers=48)
+
+# Kfolds = n (default to n-fold cross-validations)
+
+fs_OOB <- forestsearch_Kfold(fs.est=fs.est,est.scale="hr",details=FALSE)
+
+# Reset workers to single
+plan(sequential)
+
+summary_OOB <- forestsearch_KfoldOut(res=fs_OOB,details=TRUE,outall=TRUE)
+
+table(summary_OOB$SGs_found[,1])
+table(summary_OOB$SGs_found[,2])
+
+t.now<-proc.time()[3]
+tall.min<-(t.now-t.start.fs)/60
+cat("Minutes for analysis + bootstrap + n-fold",c(tall.min),"\n")
+```
+
+## Forest Search 10-fold cross-validation  
+```{r FStenfold, echo=TRUE, eval=TRUE}
+# If not already called
+library(doFuture)
+library(doRNG)
+registerDoFuture()
+registerDoRNG()
+
+#nbrOfWorkers()
+#nbrOfFreeWorkers()
+#freeConnections()
+# workers=48 works well on popOS
+plan("multisession", workers=48)
+
+fs_ten <- forestsearch_tenfold(fs.est=fs.est,sims=tenfoldsims,details=TRUE)
+
+# Reset workers to single
+plan(sequential)
+
+print(fs_ten$find_summary)
+print(fs_ten$sens_summary)
+
+print(head(fs_ten$sens_out))
+print(head(fs_ten$find_out))
+
+t.now<-proc.time()[3]
+tall.min<-(t.now-t.start.fs)/60
+cat("Minutes (all analyses)",c(tall.min),"\n")
+
+#if(!is.null(outfile_name) & exists("fs_OOB")){
+#save(fs_bc, fs.est, tall.min, fs_OOB, summary_OOB, fs_ten, file=outfile_name)
+#cat("Saving file here:",c(outfile_name),"\n")
+#}
+# Only saving 10-fold cross-validation
+#if(!is.null(outfile_name) & !exists("fs_OOB")){
+#save(fs_bc, fs.est, tall.min, fs_ten, file=outfile_name)
+#cat("Saving file here:",c(outfile_name),"\n")
+#}
+
+```
+

@@ -329,6 +329,7 @@ pval.asy.2sided<-2*(1-pnorm(abs(Z.asy)))
 pval.asy<-1-pnorm(Z.asy)
 
 if(details){
+cat("Asymptotic based CI's","\n")
 cat("Restricted means (dhat) at L=",c(L),"\n")
 cat("dhat, Asy 95% CI=",c(dhat,lower.asy,upper.asy),"\n")
 cat("Asy: Z, p-val (1-sided, 2-sided)=",c(Z.asy,pval.asy,pval.asy.2sided),"\n")
@@ -357,6 +358,7 @@ se.dhat.star<-sqrt(var(dhat.star))
 lower.star<-dhat-1.96*sqrt(var(dhat.star))
 upper.star<-dhat+1.96*sqrt(var(dhat.star))
 if(details){ 
+cat("Martingale-resampling based CI's","\n")  
 cat("Number of resampling draws=",c(draws),"\n")
 cat("Restricted means (dhat) at L=",c(L),"\n")
 cat("dhat, 95% CI=",c(dhat,lower.star,upper.star),"\n")
@@ -394,6 +396,8 @@ if(!is.null(taus)){
 tau1<-taus[1]
 tau2<-taus[2]
 }
+
+if(details) cat("Resampling for simultaneous CIs over (tau1,tau2)","\n")
 
 # Points at which to calculated difference in KMs
 dpoints<-seq(tau1,tau2,by=tau.seq)

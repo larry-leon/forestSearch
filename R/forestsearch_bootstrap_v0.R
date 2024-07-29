@@ -384,24 +384,6 @@ dfH_out=dfH_out,dfHc_out=dfHc_out)
 return(boot_out)
 }
 
-# Note: If double-bootstrap is implemented try BCa
-bca <- function(theta, conf.level = .95){
-  low <- (1 - conf.level)/2
-  high <- 1 - low
-  sims <- length(theta)
-  z.inv <- length(theta[theta < mean(theta)])/sims
-  z <- qnorm(z.inv)
-  U <- (sims - 1) * (mean(theta, na.rm=TRUE) - theta)
-  top <- sum(U^3)
-  under <- 6 * (sum(U^2))^{3/2}
-  a <- top / under
-  lower.inv <-  pnorm(z + (z + qnorm(low))/(1 - a * (z + qnorm(low))))
-  lower <- quantile(theta, lower.inv, names=FALSE)
-  upper.inv <-  pnorm(z + (z + qnorm(high))/(1 - a * (z + qnorm(high))))
-  upper <- quantile(theta, upper.inv, names=FALSE)
-  return(c(lower, upper))
-}
-
 get_dfPlot<-function(res,dgm){
 hrH_true<-dgm$hr.H.true
 hrHc_true<-dgm$hr.Hc.true

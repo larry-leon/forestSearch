@@ -66,7 +66,7 @@ fun_arg_list_boot2<-c("dgm","maxFollow","sim_aftm1_gbsg","forestsearch","fs.esti
                 "event.name",
                 "get.FG","FG.transform","LS.int.FG","vt.subg.harm.survival","vt.threshold","treat.threshold","maxdepth","n.min","ntree","vt.data2",
                 "formatRCTDataset2","vt.estimates.out","label.analyses","grf.subg.harm.survival","grf.estimates.out","dmin.grf",
-                "frac.tau","sg_focus",
+                "frac.tau","sg_focus","is.RCT",
                 "get.FS","get.VT","get.GRF","grf.fs.subg","muC.adj","oc_analyses","N","split_method","quiet",
                 "cox.formula.boot","forestsearch_bootstrap","oc_analyses_FSboot","fsBoot.estimates.out","boots","est.loghr",
                 "get_Ystar","count.id","fsboot_forparallel","get_Cox_sg")
@@ -76,13 +76,15 @@ fun_arg_list_boot<-c("forestsearch","fs.estimates.out","vi.grf.min","dummy","sub
                       "subgroup.consistency","acm.disjctif","max.minutes","ztrail","one.zero","maxk","nmin.fs","d.min","hr.threshold",
                       "NA.CHR.Weighted","R.Weighted","N.Weighted","hr.consistency","stop.threshold","fs.splits","m1.threshold","pconsistency.threshold",
                       "confounders.name","outcome.name","id.name","treat.name",
-                      "event.name","sg_focus","pstop_futile",
+                      "event.name","sg_focus","pstop_futile","is.RCT",
                       "get.FG","FG.transform","LS.int.FG","vt.subg.harm.survival",
                       "formatRCTDataset2","grf.subg.harm.survival","grf.estimates.out","dmin.grf","n.min","frac.tau",
                       "grf.fs.subg","split_method","quiet",
                       "cox.formula.boot","forestsearch_bootstrap","oc_analyses_FSboot","fsBoot.estimates.out","boots",
                        "est.loghr","ci_est","get_dfRes","get_targetEst",
-                      "get_Ystar","count.id","fsboot_forparallel","get_Cox_sg","df_boot_analysis","fs.est","H_obs","Hc_obs")
+                      "get_Ystar","count.id","fsboot_forparallel","get_Cox_sg",
+                     "df_boot_analysis","fs.est","H_obs","Hc_obs","nb_boots","est.scale",
+                     "details","df.analysis","df_boot","id0","NN")
 
 
 get_Ystar<-function(boot){
@@ -149,6 +151,7 @@ fsboot_forparallel<-function(boot){
 # Re-do grf (set to NULL) for bootstrap data
 tempB<-try(forestsearch(df.analysis=dfnew_boot,
 df.predict=dfnew,
+is.RCT=fs.est$is.RCT,
 Allconfounders.name=fs.est$Allconfounders.name,
 max_n_confounders=fs.est$max_n_confounders,
 vi.grf.min=fs.est$vi.grf.min,
@@ -161,9 +164,9 @@ grf_res=NULL, grf_cuts=NULL,
 grf_depth=fs.est$grf_depth,
 frac.tau=fs.est$frac.tau,
 sg_focus=fs.est$sg_focus,
-details=FALSE,
-outcome.name=outcome.name,treat.name=treat.name,
-event.name=event.name,id.name=id.name,
+details=(boot <= 3),
+outcome.name=fs.est$outcome.name,treat.name=fs.est$treat.name,
+event.name=fs.est$event.name,id.name=fs.est$id.name,
 n.min=fs.est$n.min,
 hr.threshold=fs.est$hr.threshold,
 hr.consistency=fs.est$hr.consistency,
@@ -172,14 +175,8 @@ pstop_futile=fs.est$pstop_futile,
 fs.splits=fs.est$fs.splits,
 d0.min=fs.est$d0.min,d1.min=fs.est$d1.min,
 pconsistency.threshold=fs.est$pconsistency.threshold,
-max.minutes=max.minutes,
+max.minutes=fs.est$max.minutes,
 maxk=fs.est$maxk,plot.sg=FALSE),TRUE)
-
-#checkB <- inherits(tempB,"try-error") 
-#if(checkB){
-#cat_line("Error in tempB",col="red")
-#print(tempB$sg.harm)
-#}
 
   # FS with error output NA's (set above)
   # FS done (w/o error) but NO sg found (replace NAs above with what is calculated)
@@ -230,6 +227,8 @@ maxk=fs.est$maxk,plot.sg=FALSE),TRUE)
     
   } # Bootstrap estimable
   
+if(boot <= 3) cat("Bootstrap done, B=",c(boot),"\n")
+
   dfres<-data.table(H_biasadj_1,H_biasadj_2,
                     Hc_biasadj_1,Hc_biasadj_2,
                     tmins_search,max_sg_est)

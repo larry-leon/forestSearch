@@ -1,6 +1,6 @@
 
 # Necessary packages
-requiredPackages <- c("grf","policytree","data.table","randomForest","survival","dplyr","glmnet")
+requiredPackages <- c("grf","policytree","data.table","randomForest","survival","plyr","glmnet")
 ipak <- function(pkg){
   new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
   if (length(new.pkg)>0){
@@ -39,6 +39,47 @@ if(nrow(df.pred.0)==0 & nrow(df.pred.1)>0)  df.pred.out<-data.frame(df.pred.1)
 if(nrow(df.pred.0)>0 & nrow(df.pred.1)==0)  df.pred.out<-data.frame(df.pred.0)
 return(df.pred.out)
 }
+
+
+
+# conf_force=NULL
+# details=TRUE
+# use_lasso=use_lasso 
+# defaultcut_names=NULL
+# cut_type="default"
+# dmin.grf=4 
+# frac.tau=0.60 
+# grf_depth=2
+# maxk=2
+# sg_focus="Nsg_only"
+# n.min=60
+# fs.splits=1000
+# d0.min=10
+# d1.min=10
+# by.risk=12
+# plot.sg=TRUE
+
+
+# is.RCT = TRUE; seedit = 8316951;
+# use_lasso=FALSE;
+# use_grf=TRUE;
+# use_grf_only=FALSE;
+# grf_res=NULL; grf_cuts=NULL; max_n_confounders=1000;
+# grf_depth=2; dmin.grf=12; frac.tau=0.6;
+# conf_force=NULL;
+# defaultcut_names=NULL; cut_type="default";
+# replace_med_grf=FALSE;
+# cont.cutoff=4;
+# conf.cont_medians=NULL;
+# conf.cont_medians_force=NULL;
+# df.predict=NULL;
+# n.min=60
+# fs.splits=400;m1.threshold=Inf;
+# stop.threshold=0.90;pconsistency.threshold=0.90;d0.min=10;d1.min=10;
+# pstop_futile=0.7;max.minutes=3;minp=0.025;
+# details=TRUE;maxk=2;by.risk=12;plot.sg=TRUE;
+# vi.grf.min=-0.2
+
 
 
 forestsearch<-function(df.analysis=NULL,
@@ -111,7 +152,9 @@ cat("FS: GRF stage for cut selection with dmin,tau=",c(dmin.grf,frac.tau),"\n")
 }
 grf_res <- NULL  
 grf_res<-try(grf.subg.harm.survival(data=df.analysis,confounders.name=Allconfounders.name,
-outcome.name=outcome.name,RCT=is.RCT,seedit=seedit,maxdepth=grf_depth,
+outcome.name=outcome.name,
+RCT=is.RCT,seedit=seedit,
+maxdepth=grf_depth,
 event.name=event.name,id.name=id.name,treat.name=treat.name,n.min=n.min,dmin.grf=dmin.grf,
 frac.tau=frac.tau,details=details),TRUE)
 
@@ -166,7 +209,7 @@ if(is.null(df.predict)) df.predict <- df
   vi.cs2<-vi.cs2[vi.order,]
   
   conf.screen<-vi.cs2[,2]
-  vi_ratio <- vi.cs2[,3] / max(vi.cs2[,3])
+  vi_ratio <- vi.cs2[,3] / mean(vi.cs2[,3])
   selected.vars <- which(vi_ratio > vi.grf.min)
   conf.screen<-conf.screen[selected.vars]
   # Restrict to max of max_n_confounders
@@ -196,7 +239,7 @@ if(is.null(df.predict)) df.predict <- df
   Z<-as.matrix(df.confounders)
   colnames(Z)<-names(df.confounders)
   
-  find.grps <- subgroup.search(Y=Y,Event=Event,Treat=Treat,ID=id,Z=Z,d0.min=d0.min,d1.min=d1.min,n.min=n.min,
+  find.grps<-subgroup.search(Y=Y,Event=Event,Treat=Treat,ID=id,Z=Z,d0.min=d0.min,d1.min=d1.min,n.min=n.min,
   hr.threshold=hr.threshold,max.minutes=max.minutes,details=details,maxk=maxk)
   
   sg.harm<-NULL 
@@ -205,9 +248,6 @@ if(is.null(df.predict)) df.predict <- df
   grp.consistency<-NULL
   
   max_sg_est<-find.grps$max_sg_est
-  
-  prop_maxk <- find.grps$prop_max_count
-  
   if((!is.null(find.grps$out.found) & any(find.grps$out.found$hr.subgroups$HR>hr.consistency)) | any(find.grps$out.found$hr.subgroups$HR>hr.consistency)){# Found something?
     if(plot.sg & is.null(by.risk)) by.risk<-round(max(Y)/12,0)
     if(details) cat("# of candidate subgroups (meeting HR criteria) = ",c(nrow(find.grps$out.found$hr.subgroups)),"\n")
@@ -278,7 +318,6 @@ frac.tau=frac.tau,
 lassokeep=lassokeep,
 lassoomit=lassoomit,
 max.minutes=max.minutes,
-prop_maxk=prop_maxk,
 max_sg_est=max_sg_est,pstop_futile=pstop_futile)
 }
 # Fsdata NOT successful
